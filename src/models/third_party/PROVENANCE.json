@@ -1,0 +1,31 @@
+{
+  "upstream_repository": "https://github.com/JanSchuster/PredTrAD (Schuster et al., Interspeech 2025)",
+  "license": "BSD-3-Clause (see LICENSE.upstream)",
+  "note": "Vendored verbatim. TranAD and DTAAD bodies live in models.py; PredTrAD-V1 in PredTrAD_v1.py. Adapters that fit them to this repository are in ../tranad, ../dtaad and ../predtrad.",
+  "files": {
+    "PredTrAD_v1.py": {
+      "sha256": "e02a1483b267546bab1b7763434d15126258d9599a4b5334ba2c4109fea14134",
+      "bytes": 5711,
+      "sha256_after_import_fix": "e02a1483b267546bab1b7763434d15126258d9599a4b5334ba2c4109fea14134"
+    },
+    "models.py": {
+      "sha256": "f6f91c6b655a01fb34e8853c2e5b7d14b31cbe88c7fe2e7ef2c73c82709b2ab6",
+      "bytes": 10427,
+      "sha256_after_import_fix": "49f56a738c27fce3875a7d8cfffa9dbf217a60d0556d71457bff347f10b4d68b"
+    },
+    "dlutils.py": {
+      "sha256": "b246617d6751726348be7f3f25d01e569e7b8bbd2f2c5a03416354e638addddf",
+      "bytes": 9036,
+      "sha256_after_import_fix": "b246617d6751726348be7f3f25d01e569e7b8bbd2f2c5a03416354e638addddf"
+    }
+  },
+  "modifications": {
+    "scope": "import statements only; no model logic, layer, or hyper-parameter was changed",
+    "reason": "the upstream files import each other as `src.*`; vendored here they must use relative imports",
+    "changed": {
+      "models.py": [
+        "from src.dlutils import *"
+      ]
+    }
+  }
+}

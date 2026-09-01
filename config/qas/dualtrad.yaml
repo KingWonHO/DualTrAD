@@ -1,0 +1,48 @@
+extends: _base.yaml
+
+# The proposed detector: one shared encoder feeding a horizon-query forecaster
+# and a denoising autoencoder, fused by geometric mean.
+experiment:
+  name: QAS_DualTrAD
+
+model:
+  name: DualTrAD
+  context_length: 20
+  horizon_count: 3
+  input_dim: 4
+  output_dim: 4
+  encoder_params:
+    encoder_type: CausalTransformerEncoder
+    d_model: 64
+    n_heads: 4
+    num_layers: 2
+    feedforward_dim: 256
+    dropout: 0.1
+    positional_encoding: sinusoidal
+    causal: true
+  decoder_params:
+    decoder_type: HorizonQueryDecoder
+    n_heads: 4
+    num_layers: 2
+    feedforward_dim: 256
+    dropout: 0.1
+  head_params:
+    hidden_dim: 128
+    dropout: 0.1
+  autoencoder_params:
+    enabled: true
+    bottleneck_dim: 32
+    decoder_hidden_dim: 128
+    align_latents: true
+
+loss:
+  derivative_weight: 0.25
+  lambda_reconstruction: 0.25
+  lambda_trajectory: 0.10
+  lambda_consistency: 0.01
+
+corruption:
+  gaussian_std: 0.01
+
+scoring:
+  fusion: geometric_mean

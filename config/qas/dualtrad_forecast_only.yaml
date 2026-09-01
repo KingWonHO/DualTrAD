@@ -1,0 +1,10 @@
+extends: dualtrad.yaml
+
+# Capacity-matched control: identical weights and training signal, scored with
+# the forecasting evidence alone. The only difference from `dualtrad` is the
+# fusion step, which is what makes the fusion gain attributable.
+experiment:
+  name: QAS_DualTrAD_ForecastOnly
+
+scoring:
+  fusion: forecast_only

@@ -1,0 +1,14 @@
+extends: _base.yaml
+
+# Published baseline, adapted to this contract. The upstream body is vendored
+# verbatim under src/models/third_party with a SHA-256 record; only the adapter
+# that fits it to the shared interface lives in src/models/predtrad.
+experiment:
+  name: QAS_PredTrAD_v1
+
+model:
+  name: PredTrAD_v1
+  context_length: 20
+  horizon_steps: [1, 3, 5]
+  input_dim: 4
+  output_dim: 4
