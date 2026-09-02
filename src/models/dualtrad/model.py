@@ -32,7 +32,6 @@ class DualTrAD(BaseDetector):
         decoder_params: dict,
         head_params: dict,
         autoencoder_params: dict = None,
-        channel_encoder_params: dict = None,
         *args,
         **kwargs,
     ):
@@ -46,7 +45,6 @@ class DualTrAD(BaseDetector):
         self.decoder_params = dict(decoder_params)
         self.head_params = dict(head_params)
         self.autoencoder_params = dict(autoencoder_params or {})
-        self.channel_encoder_params = dict(channel_encoder_params or {})
 
         self.init_modules()
 
@@ -57,18 +55,6 @@ class DualTrAD(BaseDetector):
             max_length=self.context_length,
         )
         self.enc_out_chan = self.encoder.get_out_chan()
-
-        # Optional channel-axis branch. Its tokens are concatenated to the
-        # temporal memory that the horizon queries read, so it affects the
-        # forecasting path only; the autoencoder still sees the temporal memory.
-        self.channel_encoder = None
-        if self.channel_encoder_params.get("enabled", False):
-            self.channel_encoder = encoder.get("ChannelEncoder")(
-                **self.channel_encoder_params,
-                in_chan=self.input_dim,
-                context_length=self.context_length,
-                d_model=self.enc_out_chan,
-            )
 
         self.horizon_decoder: decoder.BaseHorizonDecoder = decoder.get(
             self.decoder_params["decoder_type"]
@@ -103,12 +89,7 @@ class DualTrAD(BaseDetector):
 
         memory = self.encoder(context)  # B, L, F -> B, L, D
 
-        decoder_memory = memory
-        if self.channel_encoder is not None:
-            channel_tokens = self.channel_encoder(context)  # B, F, D
-            decoder_memory = torch.cat([memory, channel_tokens], dim=1)  # B, L + F, D
-
-        prediction_features = self.horizon_decoder(decoder_memory)  # B, K, D
+        prediction_features = self.horizon_decoder(memory)  # B, K, D
         prediction = self.prediction_heads(prediction_features)  # B, K, C
 
         reconstruction = None
@@ -135,9 +116,6 @@ class DualTrAD(BaseDetector):
         model_args["input_dim"] = self.input_dim
         model_args["output_dim"] = self.output_dim
         model_args["encoder"] = self.encoder.get_config()
-        model_args["channel_encoder"] = (
-            self.channel_encoder.get_config() if self.channel_encoder is not None else None
-        )
         model_args["horizon_decoder"] = self.horizon_decoder.get_config()
         model_args["prediction_heads"] = self.prediction_heads.get_config()
         model_args["autoencoder"] = (

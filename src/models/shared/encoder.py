@@ -89,75 +89,8 @@ class CausalTransformerEncoder(BaseEncoder):
         }
 
 
-class ChannelEncoder(BaseEncoder):
-    """Transformer over the channel axis: one token per input channel.
-
-    The time encoder collapses the ``F`` channels of each timestep into one
-    vector, so channel-to-channel structure is never modelled explicitly. This
-    branch transposes the window instead, making each channel's whole series a
-    single token, and attends across channels. Channels are unordered, so it
-    uses no causal mask and no positional encoding; channel identity comes from
-    a learned embedding.
-    """
-
-    def __init__(
-        self,
-        in_chan: int,
-        context_length: int,
-        d_model: int,
-        n_heads: int,
-        num_layers: int,
-        feedforward_dim: int,
-        dropout: float,
-        **kwargs,
-    ) -> None:
-        super().__init__()
-        if num_layers < 1:
-            raise ValueError("ChannelEncoder needs at least one layer")
-        self.in_chan = in_chan
-        self.context_length = context_length
-        self.d_model = d_model
-        self.series_projection = nn.Linear(context_length, d_model)
-        self.channel_embedding = nn.Parameter(torch.empty(1, in_chan, d_model))
-        nn.init.trunc_normal_(self.channel_embedding, std=0.02)
-        self.dropout = nn.Dropout(dropout)
-        layer = nn.TransformerEncoderLayer(
-            d_model=d_model,
-            nhead=n_heads,
-            dim_feedforward=feedforward_dim,
-            dropout=dropout,
-            activation="gelu",
-            batch_first=True,
-            norm_first=True,
-        )
-        self.encoder = nn.TransformerEncoder(
-            layer, num_layers=num_layers, norm=nn.LayerNorm(d_model), enable_nested_tensor=False
-        )
-
-    def get_out_chan(self) -> int:
-        return self.d_model
-
-    def forward(self, context: torch.Tensor) -> torch.Tensor:
-        # [B, L, F] -> [B, F, L]: channels become tokens, the series is their feature.
-        tokens = self.series_projection(context.transpose(1, 2)) + self.channel_embedding
-        return self.encoder(self.dropout(tokens))
-
-    def get_config(self) -> dict[str, Any]:
-        layer = self.encoder.layers[0]
-        return {
-            "type": "ChannelEncoder",
-            "in_chan": self.in_chan,
-            "context_length": self.context_length,
-            "d_model": self.d_model,
-            "n_heads": layer.self_attn.num_heads,
-            "num_layers": len(self.encoder.layers),
-            "feedforward_dim": layer.linear1.out_features,
-        }
-
-
 ENCODERS = {
     "CausalTransformerEncoder": CausalTransformerEncoder,
-    "ChannelEncoder": ChannelEncoder,
 }
 
 

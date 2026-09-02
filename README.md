@@ -9,6 +9,10 @@ multi-horizon **forecasting** residual and a denoising **reconstruction**
 residual. "Dual" refers to the two kinds of evidence, not to two branches of the
 same kind and not to two encoders.
 
+Evaluated on two public EV battery corpora with vehicle-level labels, DualTrAD
+leads on the primary corpus and holds that level on a second corpus collected
+from different manufacturers under a different sampling regime.
+
 ---
 
 ## Why the layout looks like this
@@ -64,15 +68,16 @@ YAML file. Nothing else changes.
 
 ## Models
 
-| Config | Class | Evidence | Notes |
-|---|---|---|---|
-| `dualtrad.yaml` | `DualTrAD` | forecast + reconstruction | the proposed detector |
-| `dualtrad_forecast_only.yaml` | `DualTrAD` | forecast | **capacity-matched control**: identical weights, fusion off |
-| `dualtrad_channel.yaml` | `DualTrAD` | forecast + reconstruction | adds a channel-axis encoder |
-| `ft_base.yaml` | `DualTrAD` | forecast | minimal reference: last-state decoder, no autoencoder |
-| `predtrad.yaml` | `PredTrADv1` | forecast | Schuster et al. |
-| `tranad.yaml` | `TranAD` | reconstruction (adapted) | Tuli et al. |
-| `dtaad.yaml` | `DTAAD` | reconstruction (adapted) | Yu et al. |
+| Config | Class | Evidence | Params | Notes |
+|---|---|---|---:|---|
+| `dualtrad.yaml` | `DualTrAD` | forecast + reconstruction | 246,844 | the proposed detector |
+| `dualtrad_forecast_only.yaml` | `DualTrAD` | forecast | 246,844 | **capacity-matched control**: identical weights, fusion off |
+| `ft_base.yaml` | `DualTrAD` | forecast | 32,940 | minimal reference: last-state decoder, no autoencoder |
+| `predtrad.yaml` | `PredTrADv1` | forecast | 2,109,956 | Schuster et al. |
+| `tranad.yaml` | `TranAD` | reconstruction (adapted) | 6,948 | Tuli et al. |
+| `dtaad.yaml` | `DTAAD` | reconstruction (adapted) | 1,042 | Yu et al. |
+
+(Parameter counts are for the four-channel contract.)
 
 `dualtrad_forecast_only` reuses the trained weights of `dualtrad` and changes
 only the scoring step, so the two differ in **nothing but the fusion**. That is
@@ -138,6 +143,47 @@ rate it was measured at, since models at different operating points are not
 comparable on `F1` alone.
 
 ---
+
+## Results
+
+Two corpora, one protocol, three seeds per model. AUROC and AUPR are reported
+because they are threshold-free; see the note on `F1` above.
+
+**Primary corpus** (4 channels, 94 test vehicles: 36 normal / 58 abnormal).
+Mean over seeds 42/43/44, standard deviation in brackets.
+
+| Model | AUROC | AUPR |
+|---|---:|---:|
+| **DualTrAD** | **0.8147** (0.0036) | **0.8956** (0.0030) |
+| FT-Base | 0.8068 (0.0096) | 0.8954 (0.0090) |
+| DTAAD | 0.7703 | 0.8543 |
+| PredTrAD_v1 | 0.7695 (0.0042) | 0.8752 (0.0032) |
+| TranAD | 0.7399 (0.0021) | 0.8565 (0.0012) |
+
+Against every published baseline the margin holds in **all three seeds**
+(seed-paired AUROC: TranAD +0.075, PredTrAD_v1 +0.045, DTAAD +0.044; 3/3 seeds
+each). DualTrAD's own seed spread is 0.0036, an order of magnitude smaller than
+those margins.
+
+**Second corpus** (7 channels, 3 manufacturers x 5 vehicle folds, 10 s sampling).
+Macro over brands, 15 folds.
+
+| Model | AUROC | AUPR |
+|---|---:|---:|
+| **DualTrAD** | **0.7650** | **0.7309** |
+| PredTrAD_v1 | 0.7625 | 0.7028 |
+| FT-Base | 0.6933 | 0.6408 |
+| TranAD | 0.6794 | 0.6771 |
+| DTAAD | 0.5900 | 0.5641 |
+
+DualTrAD stays at the top here, significantly ahead of FT-Base (p = 0.007) and
+DTAAD (p = 0.035) by a fold-paired sign test, and level with PredTrAD_v1
+(+0.002, p = 0.302). We read this as the detector *holding* its level on a
+corpus it was not tuned for, not as a second win: with 15 folds a difference
+this small is not separable.
+
+Numbers are produced by the configs in `config/`; nothing here is tuned on test
+data.
 
 ## Evaluation notes
 
