@@ -1,0 +1,21 @@
+extends: dualtrad.yaml
+
+# The mirror of `dualtrad_no_autoencoder`. The forecasting loss is switched off
+# before training, so the shared encoder sees only the reconstruction objective.
+# Scored with the reconstruction evidence alone, it is directly comparable to
+# `dualtrad_reconstruction_only`.
+#
+# lambda_trajectory and lambda_consistency go with it: the first is a loss on
+# the predictions, the second pulls the autoencoder bottleneck towards the
+# horizon-query state, which is now untrained. The horizon head stays at
+# initialisation, receives no gradient, and nothing scored reads it.
+experiment:
+  name: QAS_DualTrAD_NoForecasting
+
+loss:
+  lambda_prediction: 0.0
+  lambda_trajectory: 0.0
+  lambda_consistency: 0.0
+
+scoring:
+  fusion: reconstruction_only

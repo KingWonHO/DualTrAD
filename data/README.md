@@ -1,20 +1,29 @@
 # Datasets and preprocessing
 
-Two public corpora are used. Neither is introduced here; both must be cited from
-their original publications.
+Two public datasets are used. Neither is introduced here; both must be cited
+from their original publications, and the data records cited alongside them.
 
 | | QAS | Tsinghua |
 |---|---|---|
-| Source | Cao et al., *Nat. Commun.* **16**, 1651 (2025) | Zhang et al. (public EV battery corpus) |
-| Access | Zenodo, see the paper's data-availability statement | see the corpus release |
-| Vehicles used here | 393 | 347 (3 brands) |
+| Paper | Cao et al., *Nat. Commun.* **16**, 1651 (2025) | Zhang et al., *Nat. Commun.* **14**, 5940 (2023) |
+| Data record | Zenodo, `10.5281/zenodo.10656500` (CC BY 4.0) | figshare, `10.6084/m9.figshare.23659323` |
+| Vehicles used here | 393 | 347 (292 normal / 55 abnormal) |
 | Channels | 4 — `V, I, T, SOC` | 7 inputs → 5 scored responses |
 | Sampling period | 30 s | 10 s |
 | Labels | per vehicle | per vehicle |
 
-The QAS corpus covers three anonymised manufacturers (`DTI`, `QAS`, `GIS`). This
-repository uses **QAS only**: `DTI` was excluded at the data owner's request and
-`GIS` has no verifiable time axis, so windows over it cannot be built safely.
+Neither dataset carries a name of its own, so the paper refers to them as
+Dataset A and Dataset B. Both anonymise their manufacturers.
+
+The Zenodo record covers **515 vehicles from three anonymised manufacturers**,
+which its description names `DTI`, `QAS` and `GIS`. This repository uses **QAS
+only**: `DTI` was excluded at the data owner's request, and `GIS` has no
+verifiable time axis, so windows over it cannot be built safely. A reader who
+downloads the record will therefore find more vehicles than the table above.
+
+The Tsinghua release is published as one dataset per manufacturer, which is why
+a separate model is fitted per manufacturer rather than one model over the
+pooled set.
 
 ## How the labels were made
 

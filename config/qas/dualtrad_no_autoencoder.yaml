@@ -1,0 +1,24 @@
+extends: dualtrad.yaml
+
+# Retraining ablation. The autoencoder is removed BEFORE training, so the shared
+# encoder never sees the reconstruction objective. Scored with the forecasting
+# evidence alone, it is directly comparable to `dualtrad_forecast_only`, which
+# scores the same way but was trained WITH the autoencoder.
+#
+# The reconstruction and consistency terms go with the branch: the first has no
+# output to score, the second couples the bottleneck to the horizon-query state.
+# Everything else is held at `dualtrad` values, including the input corruption,
+# which is applied to the shared encoder input rather than to the autoencoder.
+experiment:
+  name: QAS_DualTrAD_NoAutoencoder
+
+model:
+  autoencoder_params:
+    enabled: false
+
+loss:
+  lambda_reconstruction: 0.0
+  lambda_consistency: 0.0
+
+scoring:
+  fusion: forecast_only

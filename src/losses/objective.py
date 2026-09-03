@@ -47,6 +47,7 @@ class DualTrADObjective(nn.Module):
         horizon_weights: list | None = None,
         reconstruction: str = "l1",
         derivative_weight: float = 0.0,
+        lambda_prediction: float = 1.0,
         lambda_reconstruction: float = 0.0,
         lambda_trajectory: float = 0.0,
         lambda_consistency: float = 0.0,
@@ -65,6 +66,7 @@ class DualTrADObjective(nn.Module):
         self.horizon_weights = horizon_weights
         self.reconstruction = reconstruction
         self.derivative_weight = derivative_weight
+        self.lambda_prediction = lambda_prediction
         self.lambda_reconstruction = lambda_reconstruction
         self.lambda_trajectory = lambda_trajectory
         self.lambda_consistency = lambda_consistency
@@ -128,7 +130,7 @@ class DualTrADObjective(nn.Module):
             ).mean()
 
         total = (
-            prediction_loss
+            self.lambda_prediction * prediction_loss
             + self.lambda_reconstruction * reconstruction_loss
             + self.lambda_trajectory * trajectory_loss
             + self.lambda_consistency * consistency_loss

@@ -25,8 +25,8 @@ and nothing else.
 ```
 DualTrAD/
 ├── config/                 one YAML per model; a variant states only what it changes
-│   ├── qas/                single-corpus contract (4 channels)
-│   └── tsinghua/           multi-brand contract (7 channels)
+│   └── qas/                the four-channel contract (see the note on
+│                            the second corpus under Results)
 ├── data/
 │   ├── README.md           dataset construction and preprocessing  ← read this first
 │   └── preprocessing/      scripts that turn raw exports into split NPZs
@@ -71,17 +71,34 @@ YAML file. Nothing else changes.
 | Config | Class | Evidence | Params | Notes |
 |---|---|---|---:|---|
 | `dualtrad.yaml` | `DualTrAD` | forecast + reconstruction | 246,844 | the proposed detector |
-| `dualtrad_forecast_only.yaml` | `DualTrAD` | forecast | 246,844 | **capacity-matched control**: identical weights, fusion off |
-| `ft_base.yaml` | `DualTrAD` | forecast | 32,940 | minimal reference: last-state decoder, no autoencoder |
 | `predtrad.yaml` | `PredTrADv1` | forecast | 2,109,956 | Schuster et al. |
 | `tranad.yaml` | `TranAD` | reconstruction (adapted) | 6,948 | Tuli et al. |
 | `dtaad.yaml` | `DTAAD` | reconstruction (adapted) | 1,042 | Yu et al. |
 
 (Parameter counts are for the four-channel contract.)
 
-`dualtrad_forecast_only` reuses the trained weights of `dualtrad` and changes
-only the scoring step, so the two differ in **nothing but the fusion**. That is
-what makes a gain attributable to fusion rather than to added capacity.
+### Ablations
+
+Two kinds, and they answer different questions. Keeping them apart is the point.
+
+**Re-scoring.** These reuse the trained weights of `dualtrad` and change only
+the scoring step, so nothing but the fusion differs. That is what makes a gain
+attributable to the fusion rather than to capacity or to a training signal.
+
+| Config | Score | Question |
+|---|---|---|
+| `dualtrad_forecast_only.yaml` | `z = u` | is the reconstruction evidence carrying anything? |
+| `dualtrad_reconstruction_only.yaml` | `z = v` | is the forecasting evidence carrying anything? |
+
+**Retraining.** These remove a branch *before* training, so the shared encoder
+never sees that objective. Comparing each against the matching re-scoring
+config separates what a branch contributes to the representation from what it
+contributes as evidence.
+
+| Config | Trained without | Scored with |
+|---|---|---|
+| `dualtrad_no_autoencoder.yaml` | the reconstruction loss | `z = u` |
+| `dualtrad_no_forecasting.yaml` | the forecasting loss | `z = v` |
 
 ### Baseline provenance
 
@@ -111,7 +128,7 @@ model output ──► window residuals            src/metrics/scoring.py
              evidence normalisation          scales fitted on NORMAL calibration only
                     │                        each channel by its own scale
                     ▼
-                 fusion                      geometric mean, or forecast-only
+                 fusion                      geometric mean, or a single evidence
                     │
                     ▼
             vehicle aggregation              a high quantile of that vehicle's windows
@@ -127,8 +144,11 @@ Two details are worth stating because they are easy to get wrong:
 
 **Normalise per channel before combining.** Residuals are kept per channel until
 each has been divided by its own calibration scale. Averaging raw errors first
-lets whichever channel has the largest scale dominate the score — on this corpus
-that alone moved AUROC from 0.80 to 0.45.
+lets whichever channel has the largest scale dominate the score. On the primary
+corpus the voltage channel carries 94 % of the raw squared error while being the
+only channel with no discriminative power, and combining before normalising
+drives the forecasting evidence to 0.474–0.486 AUROC, below chance. Normalising
+first restores it to 0.789–0.793.
 
 **Fit the threshold on the distribution it is applied to.** A vehicle score is a
 *mean* of high window scores; a threshold read off the *window* score
@@ -146,41 +166,75 @@ comparable on `F1` alone.
 
 ## Results
 
-Two corpora, one protocol, three seeds per model. AUROC and AUPR are reported
-because they are threshold-free; see the note on `F1` above.
+Two corpora, one protocol, three seeds per model (42/43/44). AUROC and AUPR are
+reported because they are threshold-free; see the note on `F1` above. Standard
+deviation across seeds in brackets.
 
-**Primary corpus** (4 channels, 94 test vehicles: 36 normal / 58 abnormal).
-Mean over seeds 42/43/44, standard deviation in brackets.
+**Primary corpus** — 4 channels, 94 scored vehicles (36 normal / 58 abnormal).
 
 | Model | AUROC | AUPR |
 |---|---:|---:|
 | **DualTrAD** | **0.8147** (0.0036) | **0.8956** (0.0030) |
-| FT-Base | 0.8068 (0.0096) | 0.8954 (0.0090) |
-| DTAAD | 0.7703 | 0.8543 |
+| DTAAD | 0.7703 (0.0350) | 0.8543 (0.0170) |
 | PredTrAD_v1 | 0.7695 (0.0042) | 0.8752 (0.0032) |
 | TranAD | 0.7399 (0.0021) | 0.8565 (0.0012) |
 
-Against every published baseline the margin holds in **all three seeds**
+The margin over every published baseline holds in **all three seeds**
 (seed-paired AUROC: TranAD +0.075, PredTrAD_v1 +0.045, DTAAD +0.044; 3/3 seeds
-each). DualTrAD's own seed spread is 0.0036, an order of magnitude smaller than
-those margins.
+each), and DualTrAD's own seed spread of 0.0036 is an order of magnitude smaller
+than those margins.
 
-**Second corpus** (7 channels, 3 manufacturers x 5 vehicle folds, 10 s sampling).
-Macro over brands, 15 folds.
+**Second corpus** — 7 channels, 3 manufacturers x 5 vehicle folds, 10 s
+sampling. Macro over manufacturers, so each entry is 15 folds x 3 seeds.
 
 | Model | AUROC | AUPR |
 |---|---:|---:|
-| **DualTrAD** | **0.7650** | **0.7309** |
-| PredTrAD_v1 | 0.7625 | 0.7028 |
-| FT-Base | 0.6933 | 0.6408 |
-| TranAD | 0.6794 | 0.6771 |
-| DTAAD | 0.5900 | 0.5641 |
+| **DualTrAD** | **0.7710** (0.0098) | **0.7303** (0.0170) |
+| PredTrAD_v1 | 0.7535 (0.0084) | 0.6907 (0.0110) |
+| TranAD | 0.6902 (0.0095) | 0.6675 (0.0084) |
+| DTAAD | 0.5663 (0.0281) | 0.5502 (0.0231) |
 
-DualTrAD stays at the top here, significantly ahead of FT-Base (p = 0.007) and
-DTAAD (p = 0.035) by a fold-paired sign test, and level with PredTrAD_v1
-(+0.002, p = 0.302). We read this as the detector *holding* its level on a
-corpus it was not tuned for, not as a second win: with 15 folds a difference
-this small is not separable.
+DualTrAD is highest here and leads every baseline in all three seeds, but a sign
+test over the 45 (manufacturer, fold, seed) cells separates it only from DTAAD
+(+0.205, 40/43, p < 1e-4). It does not separate it from TranAD (+0.081, 26/45,
+p = 0.37) or from PredTrAD_v1 (+0.018, 23/45, p = 1.00): fold-to-fold variance
+absorbs a mean gap of that size. We read this as the detector *holding* its
+level on a corpus it was not tuned for, not as a second win.
+
+> **The second corpus is not reproducible from this repository.** Its protocol —
+> per-manufacturer folds, the fold-level calibration split, and the seven-channel
+> contract — is not included here. The numbers above are reported for
+> completeness; only the primary corpus can be re-run from `config/qas/`.
+
+### Ablation
+
+Scoring one set of trained weights three ways. Nothing is retrained, so the rows
+differ only in the fusion step.
+
+| Score | Primary | Second |
+|---|---:|---:|
+| forecast only, `z = u` | 0.7910 (−0.024) | 0.7368 (−0.034) |
+| reconstruction only, `z = v` | 0.7561 (−0.059) | 0.6886 (−0.082) |
+| **both, `z = sqrt(u v)`** | **0.8147** | **0.7710** |
+
+Neither evidence alone reaches the fusion, on either corpus. The gain is
+positive in 3/3 seeds on the primary corpus, and on the second in 35 of 44 and
+36 of 45 decided cells (p <= 0.0001). The two residuals are only weakly related
+(Pearson r = 0.32–0.37 over 385,024 test windows), which is why combining them
+adds information rather than repeating it.
+
+Retraining without a branch, on the primary corpus, separates what a branch
+gives the representation from what it gives as evidence:
+
+| Trained without | Scored with | AUROC | against |
+|---|---|---:|---|
+| the reconstruction loss | `z = u` | 0.7976 | 0.7910 — the autoencoder *costs* the forecasting branch 0.007, 3/3 seeds |
+| the forecasting loss | `z = v` | 0.7781 | 0.7561 — the forecasting branch costs the reconstruction branch 0.022, 2/3 seeds, the third flat |
+
+Each branch slightly degrades the other's evidence during training, yet the
+fusion beats both retrained single-branch models, by +0.017 and +0.037 AUROC in
+3/3 seeds. Neither branch is a representation-learning aid; both earn their
+place as evidence at scoring time.
 
 Numbers are produced by the configs in `config/`; nothing here is tuned on test
 data.

@@ -125,12 +125,16 @@ def fuse(
 
     ``geometric_mean`` requires *both* evidences to be elevated before the
     score rises, which suppresses windows where only one branch reacts.
-    ``forecast_only`` is the control that ignores the reconstruction branch.
+    ``forecast_only`` and ``reconstruction_only`` are the two controls that read
+    a single evidence; scoring one set of trained weights all three ways is what
+    makes a fusion gain attributable to the fusion.
     """
     if mode == "forecast_only":
         return forecast
     if reconstruction is None:
         raise ValueError(f"fusion mode {mode!r} needs reconstruction evidence")
+    if mode == "reconstruction_only":
+        return reconstruction
     forecast = np.maximum(forecast, 0.0)
     reconstruction = np.maximum(reconstruction, 0.0)
     if mode == "geometric_mean":

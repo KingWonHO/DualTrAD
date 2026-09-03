@@ -1,0 +1,11 @@
+extends: dualtrad.yaml
+
+# The mirror of `dualtrad_forecast_only`: identical weights and training signal,
+# scored with the reconstruction evidence alone. Together the three configs
+# score one set of trained weights three ways, which is what attributes a gain
+# to the fusion step rather than to capacity or to a training signal.
+experiment:
+  name: QAS_DualTrAD_ReconstructionOnly
+
+scoring:
+  fusion: reconstruction_only
