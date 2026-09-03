@@ -203,8 +203,11 @@ level on a corpus it was not tuned for, not as a second win.
 
 > **The second corpus is not reproducible from this repository.** Its protocol —
 > per-manufacturer folds, the fold-level calibration split, and the seven-channel
-> contract — is not included here. The numbers above are reported for
-> completeness; only the primary corpus can be re-run from `config/qas/`.
+> contract — is not included here. It also aggregates a vehicle differently: the
+> mean of that vehicle's largest `rho` fraction, with `rho` selected on
+> calibration, where `aggregate_vehicles` here takes a fixed 0.99 quantile. The
+> numbers above are reported for completeness; only the primary corpus can be
+> re-run from `config/qas/`.
 
 ### Ablation
 
