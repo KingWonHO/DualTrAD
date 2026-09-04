@@ -30,9 +30,19 @@ data:
   input_features: [volt, max_single_volt, min_single_volt, current, max_temp, min_temp, soc]
   response_features: [volt, max_single_volt, min_single_volt, max_temp, min_temp]
   context_length: 60
-  horizon_steps: [3, 9, 15]        # 30 / 90 / 150 s at a 10 s cadence
+  horizon_steps: [3, 9, 15]
   stride: 30                       # two context views per snippet
   batch_size: 128
+  # The step counts are not free parameters. Dataset A samples at 30 s and
+  # Dataset B at 10 s, and the steps are chosen so the physical durations match:
+  # 600 s of context, forecasts at 30 / 90 / 150 s, a 300 s stride.
+  timing_alignment:
+    source_cadence_seconds: 30     # Dataset A
+    target_cadence_seconds: 10     # Dataset B
+    context_seconds: 600
+    horizon_seconds: [30, 90, 150]
+    stride_seconds: 300
+    policy: preserve_selected_hybridtrad_physical_durations
   # fitted per brand and per fold, on detector-train normal vehicles only
   scaler_fit_scope: train_normal
 
@@ -52,6 +62,11 @@ training:
   early_stopping_patience: null
   grad_clip: 1.0
   amp: false
+  # tsinghua_matched_models.json declares seeds: [42]. Seeds 43 and 44 were run
+  # afterwards as an extension (runs/tsinghua_matched_models/
+  # baseline_extra_seeds_43_44) and validated against the seed-42 provenance
+  # hashes -- 135/135 results, canonical outputs unmodified. The three-seed
+  # numbers reported here rest on all three.
   seeds: [42, 43, 44]
 
 scoring:
@@ -61,6 +76,8 @@ scoring:
   # calibration and the best vehicle-level AUROC wins.
   vehicle_aggregation: top_fraction_mean
   vehicle_fraction_grid: {start: 0.05, stop: 0.95, step: 0.05}
+  # a second, finer search over the per-snippet threshold, also on calibration
+  threshold_fraction_grid: {start: 0.001, stop: 0.099, step: 0.001}
 
 splits:
   calibration_normal: detector_train_normal_4_of_5
