@@ -25,16 +25,6 @@ what produced them. Every value in `_base.yaml` is copied from
 `config/tsinghua_matched_models.json` of the run that produced those numbers
 (schema `hybridtrad-tsinghua-paper-protocol-v3`); none is reconstructed.
 
-## What is not in the results
-
-`tsinghua_matched_models.json` declares five models in its comparison
-protocol. The paper and the README report three baselines. The fifth,
-`MambaAD_TS`, was a temporal adaptation rather than the published visual
-model (`implementation_variant:
-temporal_adaptation_not_official_visual_mambaad`), and its seed-43/44 run is
-marked `pilot_only` and was aborted. Nothing from it enters any reported
-number, so it is not transcribed here.
-
 ## Two differences from Dataset A worth noticing
 
 Both are easy to miss, and both matter if you compare the two columns of the
