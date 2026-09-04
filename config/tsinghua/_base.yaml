@@ -1,0 +1,74 @@
+# Dataset B: the seven-channel, per-manufacturer, five-fold contract.
+#
+# READ THIS FIRST. These files record the protocol Dataset B ran under; the
+# driver that executes it is NOT in this repository. `scripts/run.py` performs
+# one train / calibrate / test cycle, and nothing under `src/` knows about
+# manufacturers, folds, or the top-rho vehicle aggregation this protocol uses.
+# Pointing `--config` at a file in this directory will not reproduce the
+# Dataset B numbers in the README. See `config/tsinghua/README.md`.
+#
+# Transcribed from config/tsinghua_matched_models.json of the run that produced
+# them (schema hybridtrad-tsinghua-paper-protocol-v3). Values are copied, not
+# reconstructed.
+
+dataset:
+  name: tsinghua
+  paper_doi: 10.1038/s41467-023-41226-5
+  data_doi: 10.6084/m9.figshare.23659323
+  # one original 128-point charging snippet is the atomic sample
+  cadence_seconds: 10
+  normal_label_code: "00"
+  brands: [battery_brand1, battery_brand2, battery_brand3]
+  # a separate model per manufacturer; brands are never pooled
+  brand_policy: independent_models_no_brand_pooling
+  split_unit: vehicle
+  folds: 5
+  fold_shuffle_seed: 0
+
+data:
+  # seven channels in, five scored. current and soc are inputs only.
+  input_features: [volt, max_single_volt, min_single_volt, current, max_temp, min_temp, soc]
+  response_features: [volt, max_single_volt, min_single_volt, max_temp, min_temp]
+  context_length: 60
+  horizon_steps: [3, 9, 15]        # 30 / 90 / 150 s at a 10 s cadence
+  stride: 30                       # two context views per snippet
+  batch_size: 128
+  # fitted per brand and per fold, on detector-train normal vehicles only
+  scaler_fit_scope: train_normal
+
+model:
+  input_dim: 7
+  output_dim: 5
+
+# Dataset A trains with AdamW and early stopping; this contract does not.
+optimizer:
+  name: Adam
+  learning_rate: 0.001
+  weight_decay: 0.0
+
+training:
+  epochs: 100
+  checkpoint_selection: last_epoch
+  early_stopping_patience: null
+  grad_clip: 1.0
+  amp: false
+  seeds: [42, 43, 44]
+
+scoring:
+  # per snippet, the two context views are averaged before vehicle aggregation
+  per_snippet_reduction: mean_of_two_views
+  # NOT the fixed 0.99 quantile used on Dataset A: the fraction is searched on
+  # calibration and the best vehicle-level AUROC wins.
+  vehicle_aggregation: top_fraction_mean
+  vehicle_fraction_grid: {start: 0.05, stop: 0.95, step: 0.05}
+
+splits:
+  calibration_normal: detector_train_normal_4_of_5
+  calibration_abnormal: abnormal_fold_i
+  test_normal: held_out_normal_fold_i
+  test_abnormal: all_abnormal_except_fold_i
+
+reproducibility:
+  deterministic_algorithms: true
+  cublas_workspace_config: ":4096:8"
+  epoch_seed_policy: seed_times_100000_plus_epoch

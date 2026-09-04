@@ -34,8 +34,8 @@ and nothing else.
 ```
 DualTrAD/
 ├── config/                 one YAML per model; a variant states only what it changes
-│   └── qas/                Dataset A, the four-channel contract (see the
-│                            note on Dataset B under Results)
+│   ├── qas/                Dataset A, the four-channel contract
+│   └── tsinghua/           Dataset B, the contract only -- see its README
 ├── data/
 │   ├── README.md           dataset construction and preprocessing  ← read this first
 │   └── preprocessing/      scripts that turn raw exports into split NPZs
@@ -212,7 +212,8 @@ level on data it was not tuned for, not as a second win.
 
 > **Dataset B is not reproducible from this repository.** Its protocol —
 > per-manufacturer folds, the fold-level calibration split, and the seven-channel
-> contract — is not included here. It also aggregates a vehicle differently: the
+> contract — is recorded in [`config/tsinghua/`](config/tsinghua/) but the driver
+> that executes it is not included here. It also aggregates a vehicle differently: the
 > mean of that vehicle's largest `rho` fraction, with `rho` selected on
 > calibration, where `aggregate_vehicles` here takes a fixed 0.99 quantile. The
 > numbers above are reported for completeness; only Dataset A can be
