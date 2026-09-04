@@ -113,7 +113,7 @@ comparison.
 Statistics are fitted **per channel** on training-normal vehicles only, then
 applied unchanged to every other split.
 
-Per-channel is not optional on this corpus. The four QAS channels differ by four
+Per-channel is not optional on this dataset. The four QAS channels differ by four
 orders of magnitude:
 
 | Channel | mean | std |

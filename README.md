@@ -9,9 +9,18 @@ multi-horizon **forecasting** residual and a denoising **reconstruction**
 residual. "Dual" refers to the two kinds of evidence, not to two branches of the
 same kind and not to two encoders.
 
-Evaluated on two public EV battery corpora with vehicle-level labels, DualTrAD
-leads on the primary corpus and holds that level on a second corpus collected
-from different manufacturers under a different sampling regime.
+Evaluated on two public EV battery datasets with vehicle-level labels, DualTrAD
+leads on Dataset A and holds that level on Dataset B, collected from different
+manufacturers under a different sampling regime.
+
+![DualTrAD architecture](docs/architecture.png)
+
+**(a)** Training: one shared causal encoder feeds a multi-horizon forecaster and
+a denoising reconstruction branch, optimised jointly on normal vehicles only.
+**(b)** Inference: the encoder is frozen, each residual becomes an evidence, the
+two are fused by a geometric mean, and snippet scores are aggregated per vehicle
+and compared against a threshold fitted on normal calibration vehicles.
+The vector version is [`docs/architecture.pdf`](docs/architecture.pdf).
 
 ---
 
@@ -25,8 +34,8 @@ and nothing else.
 ```
 DualTrAD/
 ├── config/                 one YAML per model; a variant states only what it changes
-│   └── qas/                the four-channel contract (see the note on
-│                            the second corpus under Results)
+│   └── qas/                Dataset A, the four-channel contract (see the
+│                            note on Dataset B under Results)
 ├── data/
 │   ├── README.md           dataset construction and preprocessing  ← read this first
 │   └── preprocessing/      scripts that turn raw exports into split NPZs
@@ -145,7 +154,7 @@ Two details are worth stating because they are easy to get wrong:
 **Normalise per channel before combining.** Residuals are kept per channel until
 each has been divided by its own calibration scale. Averaging raw errors first
 lets whichever channel has the largest scale dominate the score. On the primary
-corpus the voltage channel carries 94 % of the raw squared error while being the
+dataset the voltage channel carries 94 % of the raw squared error while being the
 only channel with no discriminative power, and combining before normalising
 drives the forecasting evidence to 0.474–0.486 AUROC, below chance. Normalising
 first restores it to 0.789–0.793.
@@ -166,11 +175,11 @@ comparable on `F1` alone.
 
 ## Results
 
-Two corpora, one protocol, three seeds per model (42/43/44). AUROC and AUPR are
+Two datasets, one protocol, three seeds per model (42/43/44). AUROC and AUPR are
 reported because they are threshold-free; see the note on `F1` above. Standard
 deviation across seeds in brackets.
 
-**Primary corpus** — 4 channels, 94 scored vehicles (36 normal / 58 abnormal).
+**Dataset A** (`qas`) — 4 channels, 94 scored vehicles (36 normal / 58 abnormal).
 
 | Model | AUROC | AUPR |
 |---|---:|---:|
@@ -184,7 +193,7 @@ The margin over every published baseline holds in **all three seeds**
 each), and DualTrAD's own seed spread of 0.0036 is an order of magnitude smaller
 than those margins.
 
-**Second corpus** — 7 channels, 3 manufacturers x 5 vehicle folds, 10 s
+**Dataset B** (Tsinghua) — 7 channels, 3 manufacturers x 5 vehicle folds, 10 s
 sampling. Macro over manufacturers, so each entry is 15 folds x 3 seeds.
 
 | Model | AUROC | AUPR |
@@ -199,14 +208,14 @@ test over the 45 (manufacturer, fold, seed) cells separates it only from DTAAD
 (+0.205, 40/43, p < 1e-4). It does not separate it from TranAD (+0.081, 26/45,
 p = 0.37) or from PredTrAD_v1 (+0.018, 23/45, p = 1.00): fold-to-fold variance
 absorbs a mean gap of that size. We read this as the detector *holding* its
-level on a corpus it was not tuned for, not as a second win.
+level on data it was not tuned for, not as a second win.
 
-> **The second corpus is not reproducible from this repository.** Its protocol —
+> **Dataset B is not reproducible from this repository.** Its protocol —
 > per-manufacturer folds, the fold-level calibration split, and the seven-channel
 > contract — is not included here. It also aggregates a vehicle differently: the
 > mean of that vehicle's largest `rho` fraction, with `rho` selected on
 > calibration, where `aggregate_vehicles` here takes a fixed 0.99 quantile. The
-> numbers above are reported for completeness; only the primary corpus can be
+> numbers above are reported for completeness; only Dataset A can be
 > re-run from `config/qas/`.
 
 ### Ablation
@@ -220,13 +229,13 @@ differ only in the fusion step.
 | reconstruction only, `z = v` | 0.7561 (−0.059) | 0.6886 (−0.082) |
 | **both, `z = sqrt(u v)`** | **0.8147** | **0.7710** |
 
-Neither evidence alone reaches the fusion, on either corpus. The gain is
-positive in 3/3 seeds on the primary corpus, and on the second in 35 of 44 and
+Neither evidence alone reaches the fusion, on either dataset. The gain is
+positive in 3/3 seeds on Dataset A, and on Dataset B in 35 of 44 and
 36 of 45 decided cells (p <= 0.0001). The two residuals are only weakly related
 (Pearson r = 0.32–0.37 over 385,024 test windows), which is why combining them
 adds information rather than repeating it.
 
-Retraining without a branch, on the primary corpus, separates what a branch
+Retraining without a branch, on Dataset A, separates what a branch
 gives the representation from what it gives as evidence:
 
 | Trained without | Scored with | AUROC | against |
@@ -272,9 +281,9 @@ scikit-learn, so tie handling is fixed and auditable.
 
 ---
 
-## Citing the corpora
+## Citing the datasets
 
-Neither corpus is introduced here. Both are public and must be cited from their
+Neither dataset is introduced here. Both are public and must be cited from their
 original publications; see [`data/README.md`](data/README.md) for the exact
 references, access links, and the preprocessing this repository applies on top
 of them.
